@@ -307,14 +307,10 @@ void AssertImpl(bool value, const string& expr_str, const string& file, const st
 
 #define ASSERT_HINT(expr, hint) AssertImpl((expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
 
-
-// Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
 void TestExcludeStopWordsFromAddedDocumentContent() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = {1, 2, 3};
-    // Сначала убеждаемся, что поиск слова, не входящего в список стоп-слов,
-    // находит нужный документ
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
@@ -324,9 +320,6 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
-
-    // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
-    // возвращает пустой результат
     {
         SearchServer server;
         server.SetStopWords("in the"s);
@@ -387,8 +380,6 @@ void TestSortDocumentByRelevance() {
     ASSERT_EQUAL_HINT(found_docs[0].id, x_0, "The first document is out of place"s);
     ASSERT_EQUAL_HINT(found_docs[1].id, x_1, "The second document is out of place"s);
     ASSERT_EQUAL_HINT(found_docs[2].id, x_2, "The third document is out of place"s);
-
-
 }
 
 void TestIsRightRating() {
@@ -425,7 +416,6 @@ void TestFilter() {
      const auto found_docs_2 = server.FindTopDocuments("три пять", [](int document_id, DocumentStatus status, int rating) {return rating >= 10;});
      ASSERT(found_docs_2.empty());
     }
-
 }
 
 void TestStatus() {
