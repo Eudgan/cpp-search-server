@@ -14,6 +14,8 @@ using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
+const double EPSILON = 1e-6;
+
 string ReadLine() {
     string s;
     getline(cin, s);
@@ -98,7 +100,7 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-            if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+            if (abs(lhs.relevance - rhs.relevance) < EPSILON) {
                 return lhs.rating > rhs.rating;
             }
             else {
@@ -377,21 +379,45 @@ void TestSortDocumentByRelevance() {
     int x_0 = 1;
     int x_1 = 0;
     int x_2 = 2;
+    const double first = 0.866434;
+    const double second = 0.173287;
+    const double third = 0.173287;
     ASSERT_EQUAL_HINT(found_docs[0].id, x_0, "The first document is out of place"s);
+        ASSERT((found_docs[0].relevance - first) < EPSILON);
     ASSERT_EQUAL_HINT(found_docs[1].id, x_1, "The second document is out of place"s);
+        ASSERT((found_docs[1].relevance - second) < EPSILON);
     ASSERT_EQUAL_HINT(found_docs[2].id, x_2, "The third document is out of place"s);
+        ASSERT((found_docs[2].relevance - third) < EPSILON);
 }
 
 void TestIsRightRating() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
-    const vector<int> ratings = {1, 2, 3};
+    const vector<int> ratings_1 = {1, 2, 3};
+    const vector<int> ratings_2 = {-1, -2, -3};
+    const vector<int> ratings_3 = {-1, 2, -4};
 
     {
         SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_1);
         const auto found_docs = server.FindTopDocuments("in"s);
         int x = 2;
+        ASSERT_EQUAL(found_docs[0].rating, x);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_2);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        int x = -2;
+        ASSERT_EQUAL(found_docs[0].rating, x);
+    }
+
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_3);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        int x = -1;
         ASSERT_EQUAL(found_docs[0].rating, x);
     }
 }
@@ -420,25 +446,48 @@ void TestFilter() {
 
 void TestStatus() {
     const int doc_id_1 = 0;
-    const string content_1 = "один два три"s;
+    const string content_1 = "один два"s;
     const vector<int> ratings_1 = {7};
 
     const int doc_id_2 = 1;
-    const string content_2 = "два три пять"s;
+    const string content_2 = "один три"s;
     const vector<int> ratings_2 = {4, 5};
+
+    const int doc_id_3 = 2;
+    const string content_3 = "один четыре"s;
+    const vector<int> ratings_3 = {4, 5};
+
+    const int doc_id_4 = 3;
+    const string content_4 = "один пять"s;
+    const vector<int> ratings_4 = {4, 5};
 
     {
      SearchServer server;
      server.AddDocument(doc_id_1, content_1, DocumentStatus::ACTUAL, ratings_1);
      server.AddDocument(doc_id_2, content_2, DocumentStatus::IRRELEVANT, ratings_2);
+     server.AddDocument(doc_id_3, content_3, DocumentStatus::BANNED, ratings_3);
+     server.AddDocument(doc_id_4, content_4, DocumentStatus::REMOVED, ratings_4);
 
-     const auto found_docs = server.FindTopDocuments("три пять", DocumentStatus::IRRELEVANT);
-     int x = 1;
-     ASSERT_EQUAL(found_docs.size(), x);
-     const Document& doc0 = found_docs[0];
-     ASSERT_EQUAL_HINT(doc0.id, doc_id_2, "Invalid document id"s);
-     const auto found_docs_2 = server.FindTopDocuments("три пять", DocumentStatus::REMOVED);
-     ASSERT(found_docs_2.empty());
+     const int x = 1;
+     const auto found_docs_1 = server.FindTopDocuments("два", DocumentStatus::ACTUAL);
+     ASSERT_EQUAL(found_docs_1.size(), x);
+     const Document& doc0_1 = found_docs_1[0];
+     ASSERT_EQUAL_HINT(doc0_1.id, doc_id_1, "Invalid document id"s);
+
+     const auto found_docs_2 = server.FindTopDocuments("три", DocumentStatus::IRRELEVANT);
+     ASSERT_EQUAL(found_docs_2.size(), x);
+     const Document& doc0_2 = found_docs_2[0];
+     ASSERT_EQUAL_HINT(doc0_2.id, doc_id_2, "Invalid document id"s);
+
+     const auto found_docs_3 = server.FindTopDocuments("четыре", DocumentStatus::BANNED);
+     ASSERT_EQUAL(found_docs_3.size(), x);
+     const Document& doc0_3 = found_docs_3[0];
+     ASSERT_EQUAL_HINT(doc0_3.id, doc_id_3, "Invalid document id"s);
+
+     const auto found_docs_4 = server.FindTopDocuments("пять", DocumentStatus::REMOVED);
+     ASSERT_EQUAL(found_docs_4.size(), x);
+     const Document& doc0_4 = found_docs_4[0];
+     ASSERT_EQUAL_HINT(doc0_4.id, doc_id_4, "Invalid document id"s);
     }
 }
 
@@ -452,7 +501,6 @@ void TestCorrectRelevance() {
     server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, {9});
 
     vector<Document> found_docs = server.FindTopDocuments("пушистый ухоженный кот"s);
-    const double EPSILON = 1e-6;
     const double first = 0.866434;
     const double second = 0.173287;
     const double third = 0.173287;
