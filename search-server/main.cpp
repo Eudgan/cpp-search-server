@@ -89,12 +89,9 @@ public:
       }
     }
 
-    explicit SearchServer(const string& text) {
-        if (!IsValidWord(text)) {
-            throw invalid_argument("stop words has invalid symbols"s);
+    explicit SearchServer(const string& text) : SearchServer(SplitIntoWords(text))
+        {
         }
-            SearchServer(SplitIntoWordsNoStop(text));
-    }
 
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
@@ -135,10 +132,6 @@ public:
 
     template <typename Function>
     vector<Document> FindTopDocuments(const string& raw_query, Function function) const {
-        if (!IsValidWord(raw_query)) {
-            throw invalid_argument("query has invalid symbols"s);
-        }
-
         const Query query = ParseQuery(raw_query);
         vector<Document> result = FindAllDocuments(query, function);
 
@@ -169,10 +162,6 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        if (!IsValidWord(raw_query)) {
-            throw invalid_argument("query has invalid symbols"s);
-        }
-
         const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
@@ -192,8 +181,7 @@ public:
                 break;
             }
         }
-        tuple<vector<string>, DocumentStatus> result = { matched_words, documents_.at(document_id).status };
-        return result;
+        return { matched_words, documents_.at(document_id).status };
     }
 private:
     struct DocumentData {
@@ -248,17 +236,23 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
-        if (text == "-"s) {
-            throw invalid_argument("some words of the query is -"s);
-        }
-        if (text[0] == '-' && text[1] == '-') {
-            throw invalid_argument("some words of the qyery have an extra -"s);
+        if (text.empty()) {
+            throw invalid_argument("query is empty"s);
         }
         bool is_minus = false;
         // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
+        }
+        if (text.empty()) {
+            throw invalid_argument("some words of the query is -"s);
+        }
+        if (text[0] == '-') {
+            throw invalid_argument("some words of the qyery have an extra -"s);
+        }
+        if (!IsValidWord(text)) {
+            throw invalid_argument("query has invalid symbols"s + " "s + text);
         }
         return {
             text,
@@ -422,6 +416,7 @@ int main() {
     FindTopDocuments(search_server, "пушистый -пёс"s);
     FindTopDocuments(search_server, "пушистый --кот"s);
     FindTopDocuments(search_server, "пушистый -"s);
+    FindTopDocuments(search_server, "пушистый скво\x12рец"s);
 
     MatchDocuments(search_server, "пушистый пёс"s);
     MatchDocuments(search_server, "модный -кот"s);
