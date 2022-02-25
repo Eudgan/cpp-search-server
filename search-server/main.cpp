@@ -84,7 +84,7 @@ public:
               throw invalid_argument("stop words has invalid symbols"s);
            }
            if (word != ""s) {
-           stop_words_.insert(word);
+              stop_words_.insert(word);
         }
       }
     }
@@ -93,7 +93,7 @@ public:
         if (!IsValidWord(text)) {
             throw invalid_argument("stop words has invalid symbols"s);
         }
-        SetStopWords(text);
+            SearchServer(SplitIntoWordsNoStop(text));
     }
 
     void SetStopWords(const string& text) {
@@ -109,10 +109,6 @@ public:
 
         if (document_id <= -1) {
             throw invalid_argument("id out of bounds"s);
-        }
-
-        if (!IsValidWord(document)) {
-            throw invalid_argument("document has invalid symbols"s);
         }
 
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -139,19 +135,6 @@ public:
 
     template <typename Function>
     vector<Document> FindTopDocuments(const string& raw_query, Function function) const {
-        vector<string> split_raw_query = SplitIntoWords(raw_query);
-        for (const auto& s : split_raw_query) {
-            if (s == "-"s) {
-                throw invalid_argument("some words of the query is -"s);
-            }
-        }
-
-        for (const auto& s : split_raw_query) {
-            if (s[0] == '-' && s[1] == '-') {
-                throw invalid_argument("some words of the qyery have an extra -"s);
-            }
-        }
-
         if (!IsValidWord(raw_query)) {
             throw invalid_argument("query has invalid symbols"s);
         }
@@ -179,27 +162,13 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        int x = 0;
-        if (index < x || index > GetDocumentCount()) {
+        if (index < 0 || index > GetDocumentCount()) {
              throw out_of_range("index out of range"s);
          }
          return document_ids_[index];
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        vector<string> split_raw_query = SplitIntoWords(raw_query);
-        for (const auto& s : split_raw_query) {
-            if (s == "-"s) {
-                throw invalid_argument("some words of the query is -"s);
-            }
-        }
-
-        for (const auto& s : split_raw_query) {
-            if (s[0] == '-' && s[1] == '-') {
-               throw invalid_argument("some words of the qyery have an extra -"s);
-            }
-        }
-
         if (!IsValidWord(raw_query)) {
             throw invalid_argument("query has invalid symbols"s);
         }
@@ -251,6 +220,9 @@ private:
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("document has invalid symbols"s + " "s + word);
+            }
             if (!IsStopWord(word)) {
                 words.push_back(word);
             }
@@ -276,6 +248,12 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
+        if (text == "-"s) {
+            throw invalid_argument("some words of the query is -"s);
+        }
+        if (text[0] == '-' && text[1] == '-') {
+            throw invalid_argument("some words of the qyery have an extra -"s);
+        }
         bool is_minus = false;
         // Word shouldn't be empty
         if (text[0] == '-') {
