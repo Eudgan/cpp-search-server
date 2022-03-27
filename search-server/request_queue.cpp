@@ -11,14 +11,12 @@ std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query,
 }
 
 std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query) {
-    std::vector<Document> answer = search_server_.FindTopDocuments(raw_query);
-    AddRequest(answer);
-    return answer; // подскажите не понял как.
+    return RequestQueue::AddFindRequest(raw_query, DocumentStatus::ACTUAL);
 }
 
 int RequestQueue::GetNoResultRequests() const {
  return count_if(requests_.begin(), requests_.end(),
-             [] (const QueryResult& i) {return i.result == false;});
+             [](const QueryResult& i)    {return !i.result;});
 }
 
 void RequestQueue::AddRequest(const std::vector<Document>& answer) {
@@ -27,9 +25,5 @@ void RequestQueue::AddRequest(const std::vector<Document>& answer) {
            requests_.pop_front();
            --count_;
     }
-    if (answer.empty()) {
-        requests_.push_back({count_, false});
-    } else {
-        requests_.push_back({count_, true});
-    }
+        requests_.push_back({count_, !answer.empty()});
 }

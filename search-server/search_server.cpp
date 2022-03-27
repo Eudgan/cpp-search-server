@@ -33,11 +33,10 @@ int SearchServer::GetDocumentCount() const {
 }
 
 int SearchServer::GetDocumentId(int index) const {
-    if (index >= 0) {
-        size_t new_index = static_cast<size_t>(index);
-        return document_ids_.at(new_index);
+    if (index < 0) {
+       throw std::invalid_argument("Incorrect index"s);
     }
-    return 0;
+    return document_ids_.at(index);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
