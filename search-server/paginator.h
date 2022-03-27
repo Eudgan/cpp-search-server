@@ -41,12 +41,12 @@ template <typename Iterator>
 class Paginator {
 public:
     Paginator(Iterator begin, Iterator end, size_t page_size) {
-        for (size_t left = distance(begin, end); left > 0;) {
-            const size_t current_page_size = std::min(page_size, left);
+        for (size_t remaining = distance(begin, end); remaining > 0;) {
+            const size_t current_page_size = std::min(page_size, remaining);
             const Iterator current_page_end = next(begin, current_page_size);
             pages_.push_back({begin, current_page_end});
 
-            left -= current_page_size;
+            remaining -= current_page_size;
             begin = current_page_end;
         }
     }

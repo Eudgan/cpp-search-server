@@ -3,10 +3,8 @@
 #include <vector>
 #include <string>
 #include <set>
-#include <map>
 
 std::vector<std::string> SplitIntoWords(const std::string& text);
-
 
 template <typename StringContainer>
 std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {

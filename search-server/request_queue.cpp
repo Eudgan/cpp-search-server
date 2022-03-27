@@ -6,34 +6,30 @@ RequestQueue::RequestQueue(const SearchServer& search_server) : search_server_{s
 
 std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentStatus status) {
     std::vector<Document> answer = search_server_.FindTopDocuments(raw_query, status);
-    AddDelete(answer);
+    AddRequest(answer);
     return answer;
 }
 
 std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query) {
     std::vector<Document> answer = search_server_.FindTopDocuments(raw_query);
-    AddDelete(answer);
-    return answer;
+    AddRequest(answer);
+    return answer; // подскажите не понял как.
 }
 
 int RequestQueue::GetNoResultRequests() const {
  return count_if(requests_.begin(), requests_.end(),
-             [] (const QueryResult& i) {return i.result == false;
-             });
-
+             [] (const QueryResult& i) {return i.result == false;});
 }
 
-void RequestQueue::AddDelete(std::vector<Document> answer) {
+void RequestQueue::AddRequest(const std::vector<Document>& answer) {
     ++count_;
     if (requests_.size() >= min_in_day_) {
-                requests_.pop_front();
-                --count_;
+           requests_.pop_front();
+           --count_;
     }
-    if (requests_.size() < min_in_day_) {
-        if (answer.empty()) {
-            requests_.push_back({count_, false});
-        } else {
-            requests_.push_back({count_, true});
-        }
+    if (answer.empty()) {
+        requests_.push_back({count_, false});
+    } else {
+        requests_.push_back({count_, true});
     }
 }
