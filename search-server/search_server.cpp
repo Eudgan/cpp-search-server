@@ -32,11 +32,30 @@ int SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-int SearchServer::GetDocumentId(int index) const {
-    if (index < 0) {
-       throw std::invalid_argument("Incorrect index"s);
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static std::map<std::string, double> word_freqs_;
+    if (!word_freqs_.empty()) {
+        word_freqs_.clear();
     }
-    return document_ids_.at(index);
+    for (auto& [word, data] : word_to_document_freqs_) {
+     for (auto& [id, freq] : data) {
+         if (document_id == id) {
+             word_freqs_[word] = freq;
+         }
+     }
+    }
+    return word_freqs_;
+}
+
+void SearchServer::RemoveDocument(int document_id) {
+    documents_.erase(document_id);
+
+    auto iter_for_documtents_ids = find(document_ids_.begin(), document_ids_.end(), document_id);
+    document_ids_.erase(iter_for_documtents_ids);
+
+    for (auto& [word, data] : word_to_document_freqs_) {
+    data.erase(document_id);
+    }
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
@@ -61,6 +80,22 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         }
     }
     return {matched_words, documents_.at(document_id).status};
+}
+
+std::vector<int>::iterator SearchServer::begin() {
+    return document_ids_.begin();
+}
+
+std::vector<int>::iterator SearchServer::end() {
+    return document_ids_.end();
+}
+
+const std::vector<int>::iterator SearchServer::begin_const() {
+    return document_ids_.begin();
+}
+
+const std::vector<int>::iterator SearchServer::end_const() {
+    return document_ids_.end();
 }
 
 bool SearchServer::IsStopWord(const std::string& word) const {

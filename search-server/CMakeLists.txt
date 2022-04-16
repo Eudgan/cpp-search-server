@@ -12,4 +12,5 @@ add_executable(search_server_deque
  request_queue.cpp
  search_server.cpp
  string_processing.cpp
+ remove_duplicates.cpp
 )

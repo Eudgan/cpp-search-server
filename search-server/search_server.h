@@ -11,6 +11,7 @@
 
 #include "string_processing.h"
 #include "document.h"
+#include "log_duration.h"
 
 using namespace std::string_literals;
 
@@ -32,18 +33,27 @@ public:
 
     int GetDocumentCount() const;
 
-    int GetDocumentId(int index) const;
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
+    std::vector<int>::iterator begin();
+
+    std::vector<int>::iterator end();
+
+    const std::vector<int>::iterator begin_const();
+
+    const std::vector<int>::iterator end_const();
 private:
     struct DocumentData {
         int rating;
         DocumentStatus status;
     };
     const std::set<std::string> stop_words_;
-    std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> documents_;
+    std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::vector<int> document_ids_;
 
     bool IsStopWord(const std::string& word) const;
