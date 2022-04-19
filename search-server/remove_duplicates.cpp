@@ -10,7 +10,7 @@ std::vector<int> remove_id;
 for (auto document_id : search_server) {
     std::set<std::string> words;
 
-    for (auto& [word, freq] : search_server.GetWordFrequencies(document_id)) {
+    for (const auto& [word, freq] : search_server.GetWordFrequencies(document_id)) {
         words.insert(word);
     }
 
@@ -22,9 +22,9 @@ for (auto document_id : search_server) {
 }
 
 
-for (int i : remove_id) {
-    search_server.RemoveDocument(i);
-    std::cout << "Found duplicate document id " << i << std::endl;
+for (int id : remove_id) {
+    search_server.RemoveDocument(id);
+    std::cout << "Found duplicate document id "s << id << std::endl;
 }
 
 }

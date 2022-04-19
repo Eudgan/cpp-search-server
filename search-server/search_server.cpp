@@ -11,11 +11,13 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     const auto words = SplitIntoWordsNoStop(document);
 
     const double inv_word_count = 1.0 / words.size();
-    for (const std::string& word : words) {
-        word_to_document_freqs_[word][document_id] += inv_word_count;
+
+    for (auto iter = words.begin(); iter != words.end(); ++iter) {
+        word_to_document_freqs_[*iter][document_id] += inv_word_count;
+        reverse_word_to_document_freqs_[document_id][*iter] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
-    document_ids_.push_back(document_id);
+    document_ids_.insert(document_id);
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
@@ -33,29 +35,32 @@ int SearchServer::GetDocumentCount() const {
 }
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
-    static std::map<std::string, double> word_freqs_;
-    if (!word_freqs_.empty()) {
-        word_freqs_.clear();
+    const std::map<std::string, double> word_freqs_;
+
+    if (reverse_word_to_document_freqs_.count(document_id) == 1) {
+        return reverse_word_to_document_freqs_.at(document_id);
     }
-    for (auto& [word, data] : word_to_document_freqs_) {
-     for (auto& [id, freq] : data) {
-         if (document_id == id) {
-             word_freqs_[word] = freq;
-         }
-     }
-    }
-    return word_freqs_;
+    return word_freqs_; // висит предупреждение Address of stack memory associated with local variable 'word_freqs_' returned to caller [clang-analyzer-core.StackAddressEscape] можете подсказать в чем проблема?
 }
 
 void SearchServer::RemoveDocument(int document_id) {
     documents_.erase(document_id);
 
-    auto iter_for_documtents_ids = find(document_ids_.begin(), document_ids_.end(), document_id);
-    document_ids_.erase(iter_for_documtents_ids);
+    document_ids_.erase(document_id);
+
+//    for (auto it = word_to_document_freqs_.begin(); it != word_to_document_freqs_.end(); ) {
+//        auto new_iter = find_if(it, word_to_document_freqs_.end(), [&document_id] (auto& first_map, auto& second_map){ return second_map.find(document_id);});
+//        it = ++new_iter;
+//        new_iter ->second.erase(document_id);
+//    }
+// напрвьте пожалуйста. идея была такая: чтобы проскакивать лишные слова надо как-то найти итератор, который встречает нужный id {id = docuemnt_id, freq]. И каждый раз обновлять найденый итератор на + 1
+// возможно решение проще и я перемудрил
 
     for (auto& [word, data] : word_to_document_freqs_) {
-    data.erase(document_id);
-    }
+       data.erase(document_id);
+   }
+
+    reverse_word_to_document_freqs_.erase(document_id);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
@@ -82,19 +87,19 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
     return {matched_words, documents_.at(document_id).status};
 }
 
-std::vector<int>::iterator SearchServer::begin() {
+std::set<int>::iterator SearchServer::begin() {
     return document_ids_.begin();
 }
 
-std::vector<int>::iterator SearchServer::end() {
+std::set<int>::iterator SearchServer::end() {
     return document_ids_.end();
 }
 
-const std::vector<int>::iterator SearchServer::begin_const() {
+const std::set<int>::iterator SearchServer::begin_const() {
     return document_ids_.begin();
 }
 
-const std::vector<int>::iterator SearchServer::end_const() {
+const std::set<int>::iterator SearchServer::end_const() {
     return document_ids_.end();
 }
 
