@@ -14,7 +14,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
 
     for (auto iter = words.begin(); iter != words.end(); ++iter) {
         word_to_document_freqs_[*iter][document_id] += inv_word_count;
-        reverse_word_to_document_freqs_[document_id][*iter] += inv_word_count;
+        document_to_word_freqs_[document_id][*iter] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
     document_ids_.insert(document_id);
@@ -35,12 +35,12 @@ int SearchServer::GetDocumentCount() const {
 }
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
-    const std::map<std::string, double> word_freqs_;
+    const static std::map<std::string, double> word_freqs_;
 
-    if (reverse_word_to_document_freqs_.count(document_id) == 1) {
-        return reverse_word_to_document_freqs_.at(document_id);
+    if (document_to_word_freqs_.count(document_id) == 1) {
+        return document_to_word_freqs_.at(document_id);
     }
-    return word_freqs_; // висит предупреждение Address of stack memory associated with local variable 'word_freqs_' returned to caller [clang-analyzer-core.StackAddressEscape] можете подсказать в чем проблема?
+    return word_freqs_;
 }
 
 void SearchServer::RemoveDocument(int document_id) {
@@ -48,19 +48,11 @@ void SearchServer::RemoveDocument(int document_id) {
 
     document_ids_.erase(document_id);
 
-//    for (auto it = word_to_document_freqs_.begin(); it != word_to_document_freqs_.end(); ) {
-//        auto new_iter = find_if(it, word_to_document_freqs_.end(), [&document_id] (auto& first_map, auto& second_map){ return second_map.find(document_id);});
-//        it = ++new_iter;
-//        new_iter ->second.erase(document_id);
-//    }
-// напрвьте пожалуйста. идея была такая: чтобы проскакивать лишные слова надо как-то найти итератор, который встречает нужный id {id = docuemnt_id, freq]. И каждый раз обновлять найденый итератор на + 1
-// возможно решение проще и я перемудрил
+    for (const auto& [word, freq]: document_to_word_freqs_.at(document_id)) {
+        word_to_document_freqs_.at(word).erase(document_id);
+    }
 
-    for (auto& [word, data] : word_to_document_freqs_) {
-       data.erase(document_id);
-   }
-
-    reverse_word_to_document_freqs_.erase(document_id);
+    document_to_word_freqs_.erase(document_id);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
