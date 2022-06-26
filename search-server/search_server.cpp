@@ -67,7 +67,7 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
         throw std::out_of_range("no document"s);
     }
 
-    const auto query = ParseQuery(raw_query);
+    const auto query = ParseQuery(raw_query, std::execution::seq);
 
     std::vector<std::string_view> matched_words;
     for (const std::string_view word : query.minus_words) {
@@ -101,7 +101,7 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
         throw std::out_of_range("no document"s);
     }
 
-    const auto query = ParseQuery_Par(raw_query);
+    const auto query = ParseQuery(raw_query, std::execution::par);
     
     std::vector<std::string_view> matched_words;
 
@@ -199,40 +199,6 @@ void SearchServer::DeleteCopy(std::vector<std::string_view>& result) const {
     }
     result.erase(last, result.end());
 }
-
-SearchServer::Query SearchServer::ParseQuery(const std::string_view text) const {
-    Query result;
-    for (const std::string_view word : SplitIntoWords(text)) {
-        const auto query_word = ParseQueryWord(word);
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                result.minus_words.push_back(query_word.data);
-            } else {
-                result.plus_words.push_back(query_word.data);
-            }
-        }
-    }
-    DeleteCopy(result.minus_words);
-    DeleteCopy(result.plus_words);
-    return result;
-}
-
-SearchServer::Query SearchServer::ParseQuery_Par(const std::string_view text) const {
-    Query result;
-    for (const std::string_view word : SplitIntoWords(text)) {
-        const auto query_word = ParseQueryWord(word);
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                result.minus_words.push_back(query_word.data);
-            }
-            else {
-                result.plus_words.push_back(query_word.data);
-            }
-        }
-    }
-    return result;
-}
-
 
 double SearchServer::ComputeWordInverseDocumentFreq(const std::string_view word) const {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
